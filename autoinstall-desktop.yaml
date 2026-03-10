@@ -1,0 +1,98 @@
+#cloud-config
+bootcmd:
+  - echo $(cat /proc/cmdline) "autoinstall" > /root/cmdline
+  - mount -n --bind -o ro /root/cmdline /proc/cmdline
+autoinstall:
+  version: 1
+  interactive-sections: []
+
+  source:
+    id: ubuntu-desktop-minimal
+
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  timezone: Asia/Singapore
+
+  shutdown: poweroff
+
+  refresh-installer:
+    update: false
+
+  identity:
+    hostname: intunbuntu-__VM_NAME__
+    username: ubuntu
+    password: "__USER_PASSWORD_HASH__"
+
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      - __SSH_PUBLIC_KEY__
+
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+      password: "__DISK_PIN__"
+
+  late-commands:
+    # Full upgrade + Microsoft repos + packages
+    - |
+      curtin in-target -- sh -c '
+        apt update
+        apt full-upgrade -y
+
+        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg
+
+        wget -q https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb -O /tmp/ms-prod.deb
+        dpkg -i /tmp/ms-prod.deb
+        rm /tmp/ms-prod.deb
+
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge/ stable main" \
+          > /etc/apt/sources.list.d/microsoft-edge.list
+
+        wget -q https://packages.microsoft.com/config/ubuntu/24.04/insiders-fast.list \
+          -O /etc/apt/sources.list.d/microsoft-insiders-fast.list
+
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" \
+          > /etc/apt/sources.list.d/microsoft-ubuntu-jammy-prod.list
+
+        apt update
+        apt install -y microsoft-edge-stable microsoft-azurevpnclient intune-portal
+      '
+
+    # Clevis TPM2 auto-unlock
+    - |
+      curtin in-target -- sh -c '
+        apt install -y clevis clevis-luks clevis-tpm2 clevis-initramfs tpm2-tools
+
+        dev=$(lsblk -s -rpo NAME,FSTYPE "$(findmnt -no SOURCE /)" | awk "\$2==\"crypto_LUKS\"{print \$1; exit}")
+        if [ -n "$dev" ]; then
+          printf "%s" "__DISK_PIN__" | clevis luks bind -y -k - -d "$dev" tpm2 "{\"hash\":\"sha256\",\"key\":\"ecc\"}"
+          update-initramfs -u -k all
+        fi
+      '
+
+    # Services + sudo
+    - |
+      curtin in-target -- sh -c '
+        systemctl disable cups cups-browsed avahi-daemon ModemManager fwupd \
+          unattended-upgrades apport 2>/dev/null || true
+        echo "ubuntu ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu
+        chmod 440 /etc/sudoers.d/ubuntu
+      '
+
+    # Password policy
+    - >-
+      curtin in-target --
+      sed -i '/pam_pwquality.so/s/retry=3/retry=3 dcredit=-1 ocredit=-1 ucredit=-1 lcredit=-1 minlen=12/'
+      /etc/pam.d/common-password
+
+    # Boot splash
+    - >-
+      curtin in-target --
+      sed -i /etc/default/grub -e
+      's/GRUB_CMDLINE_LINUX_DEFAULT=".*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/'
+    - curtin in-target -- update-grub
