@@ -38,6 +38,8 @@ ssh -i vm_prepare_files/id_ed25519 ubuntu@<vm-ip>
 ```
 
 > **Important:** Upon first login, open Microsoft Edge. You will be prompted for a "Login" keyring password — enter the same password as your user login password. If you skip this step, Intune Portal enrollment will fail.
+<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/7a535c27-fee2-4be2-8aef-7b4ee045efaf" />
+
 
 ## What's preconfigured
 
