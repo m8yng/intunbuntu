@@ -97,3 +97,9 @@ YAML config served at: https://intunbuntu.azurewebsites.net/
 Custom LUKS PIN: `https://intunbuntu.azurewebsites.net/123321`
 
 Validated with `ubuntu-24.04.4-desktop-amd64.iso` (noble).
+
+---
+
+## Guides
+
+- [YubiKey USB passthrough to VM](yubikey-passthrough.md)
