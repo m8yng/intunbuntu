@@ -1,6 +1,6 @@
 # intunbuntu
 
-Automatically prepare an Intune-ready Ubuntu environment.
+A collection of scripts and YAML files that helps automatically prepare an Intune-ready Ubuntu environment.
 
 <img width="480" alt="intunbuntu desktop" src="https://github.com/user-attachments/assets/d7b4ec3f-8058-4c82-bd84-6da9784ad721" />
 
@@ -43,6 +43,19 @@ ssh -i vm_prepare_files/id_ed25519 ubuntu@<vm-ip>
 
 ---
 
+## `use-yubikey.sh`
+
+Hotplug a YubiKey to a running VM.
+
+```bash
+./use-yubikey.sh insert <vm-name>   # Attach YubiKey
+./use-yubikey.sh remove <vm-name>   # Detach YubiKey
+```
+
+If multiple YubiKeys are connected, prompts for selection.
+
+---
+
 ## First login
 
 > **Important:** The "Login" keyring must exist before enrolling in Intune Portal.
@@ -57,7 +70,7 @@ ssh -i vm_prepare_files/id_ed25519 ubuntu@<vm-ip>
 >
 > **Intune Portal enrollment will fail without this keyring.**
 
-<img width="1280" height="800" alt="keyring prompt" src="https://github.com/user-attachments/assets/7a535c27-fee2-4be2-8aef-7b4ee045efaf" />
+<img width="400" alt="keyring prompt" src="https://github.com/user-attachments/assets/7a535c27-fee2-4be2-8aef-7b4ee045efaf" />
 
 ---
 

@@ -60,7 +60,8 @@ autoinstall:
           > /etc/apt/sources.list.d/microsoft-ubuntu-jammy-prod.list
 
         apt update
-        apt install -y microsoft-edge-stable microsoft-azurevpnclient intune-portal
+        apt install -y microsoft-edge-stable microsoft-azurevpnclient intune-portal \
+          opensc pcsc-tools libnss3-tools
       '
 
     # Clevis TPM2 auto-unlock
