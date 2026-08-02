@@ -74,35 +74,8 @@ exclusively owned by the VM while inserted. Inside the VM, verify with
 
 ## Notes
 
-**Login keyring.** Intune enrollment requires the GNOME "Login" keyring to
-exist. Check with
-
-```bash
-busctl --user get-property org.freedesktop.secrets \
-  /org/freedesktop/secrets/collection/login \
-  org.freedesktop.Secret.Collection Label
-```
-
-Expected: `s "Login"`. If missing, reboot or open Edge to trigger the
-keyring creation prompt (use the same password as the user login).
-
-<img width="400" alt="keyring prompt" src="https://github.com/user-attachments/assets/7a535c27-fee2-4be2-8aef-7b4ee045efaf" />
-
-**Smart card polkit rule.** pcscd's default policy allows only active GUI
-sessions. Intune Portal and the identity broker run from a non-active
-context and are rejected — `sudo ykman piv info` sees the certs but Intune's
-picker is empty. The autoinstall drops
-`/etc/polkit-1/rules.d/99-pcscd.rules` to allow the `ubuntu` user.
-
-**Host pcscd conflict.** If `pcscd` is running on the host, QEMU may fail to
-claim the USB device (`error -32`). Stop it before attaching:
-
-```bash
-sudo systemctl stop pcscd pcscd.socket
-```
-
-See [YubiKey USB passthrough to VM](Notes/yubikey-passthrough.md) for manual
-XML, verification, and troubleshooting.
+- [Gotchas](Notes/gotchas.md) — login keyring, smart card polkit rule, host pcscd conflict
+- [YubiKey USB passthrough to VM](Notes/yubikey-passthrough.md) — manual XML flow and troubleshooting
 
 ## Testing
 
@@ -137,4 +110,4 @@ be passed in the path, e.g. `https://intunbuntu.azurewebsites.net/123321`.
 
 ## Guides
 
-- [YubiKey USB passthrough to VM](Notes/yubikey-passthrough.md)
+See [Notes/](Notes/).
