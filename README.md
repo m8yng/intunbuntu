@@ -86,6 +86,8 @@ busctl --user get-property org.freedesktop.secrets \
 Expected: `s "Login"`. If missing, reboot or open Edge to trigger the
 keyring creation prompt (use the same password as the user login).
 
+<img width="400" alt="keyring prompt" src="https://github.com/user-attachments/assets/7a535c27-fee2-4be2-8aef-7b4ee045efaf" />
+
 **Smart card polkit rule.** pcscd's default policy allows only active GUI
 sessions. Intune Portal and the identity broker run from a non-active
 context and are rejected — `sudo ykman piv info` sees the certs but Intune's
