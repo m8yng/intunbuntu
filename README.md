@@ -1,137 +1,137 @@
 # intunbuntu
 
-A collection of scripts and YAML files that helps automatically prepare an Intune-ready Ubuntu environment.
+Autoinstall config and helper scripts to build an Ubuntu Desktop VM for Intune enrollment.
 
 <img width="480" alt="intunbuntu desktop" src="https://github.com/user-attachments/assets/d7b4ec3f-8058-4c82-bd84-6da9784ad721" />
 
-### Tested configurations
+## Overview
 
-| Ubuntu | intune-portal | microsoft-identity-broker | Edge | Status |
-|--------|---------------|---------------------------|------|--------|
-| 26.04 LTS (Resolute) | 1.2605.16 | 3.0.2 | 151.0.4129.59 | Fully compliant |
-| 24.04 LTS (Noble) | 1.2603.31 | 2.5.2 | 146.x | Fully compliant |
+`create-intunbuntu-vm.sh` takes a stock Ubuntu Desktop ISO, remasters it with
+`autoinstall-desktop.yaml`, and creates a libvirt/QEMU VM that installs
+without prompts. On first boot the VM has the Intune Portal client, Edge,
+LUKS with TPM2 auto-unlock, and smart card support ready for user sign-in.
 
----
+## Added on top of stock Ubuntu
 
-## `create-intunbuntu-vm.sh`
+| Area | Content |
+|---|---|
+| Install | Unattended autoinstall |
+| Intune stack | `intune-portal`, `microsoft-edge-stable`, `microsoft-azurevpnclient` |
+| Disk encryption | LUKS + `clevis-tpm2` auto-unlock |
+| Smart card | `opensc`, `pcscd`, `yubikey-manager`, polkit rule for `pcscd` access |
+| VPN | `openvpn3-client`, `microsoft-azurevpnclient` |
+| Hardening | `pam_pwquality` policy, key-only SSH, GDM smart-card auth disabled, several daemons disabled |
+| Tools | `use-yubikey.sh` — USB-passthrough a YubiKey to a running VM |
 
-Creates a libvirt/QEMU VM with Ubuntu Desktop — fully automated.
-Downloads the ISO if needed, remasters it, installs unattended, and boots the VM.
-Supports Ubuntu 24.04 and 26.04.
+## Quick start
 
+```bash
+./create-intunbuntu-vm.sh \
+  --vm-name intune-vm1 \
+  --disk-pin 345721 \
+  --user-password 'M2!sQ8@vT5#LdR'
 ```
-./create-intunbuntu-vm.sh --vm-name NAME --disk-pin PIN --user-password 'PASS' [options]
+
+Downloads the ISO if needed, remasters it, installs, boots. Approximately 20 minutes.
+
+```bash
+ssh -i vm_prepare_files/id_ed25519 ubuntu@<vm-ip>
 ```
+
+## Validated
+
+| Ubuntu | intune-portal | identity-broker | Edge |
+|---|---|---|---|
+| 26.04 LTS (Resolute) | 1.2605.16 | 3.0.2 | 151.0.4129.59 |
+| 24.04 LTS (Noble) | 1.2603.31 | 2.5.2 | 146.x |
+
+## Scripts
+
+### `create-intunbuntu-vm.sh`
 
 | Flag | Required | Description | Default |
-|------|----------|-------------|---------|
+|---|---|---|---|
 | `--vm-name` | Yes | VM name | — |
-| `--disk-pin` | Yes | LUKS encryption pin (min 6 digits) | — |
-| `--user-password` | Yes | User password (min 12 chars, upper/lower/digit/special) | — |
+| `--disk-pin` | Yes | LUKS PIN, min 6 digits | — |
+| `--user-password` | Yes | User password (12+ chars, complexity) | — |
 | `--iso` | No | Ubuntu ISO path | `vm_prepare_files/ubuntu-*.iso` |
 | `--config` | No | Autoinstall YAML | `autoinstall-desktop.yaml` |
 | `--disk` | No | Disk size | `15G` |
 | `--cpus` | No | vCPUs | `1` |
 | `--memory` | No | RAM in MiB | `3072` |
 
-```bash
-./create-intunbuntu-vm.sh \
-  --vm-name intune-vm1 \
-  --disk-pin 345721 \
-  --user-password 'M2!sQ8@vT5#LdR' \
-  --cpus 2 --memory 4096
-```
-
-The installation includes `apt update` and `apt full-upgrade`.
-
-SSH access (key auto-generated in `vm_prepare_files/`):
-```bash
-ssh -i vm_prepare_files/id_ed25519 ubuntu@<vm-ip>
-```
-
----
-
-## `use-yubikey.sh`
-
-Hotplug a YubiKey USB device to/from a running VM for smart card authentication (Intune CBA).
+### `use-yubikey.sh`
 
 ```bash
-./use-yubikey.sh insert <vm-name>   # Redirect YubiKey from host to VM
-./use-yubikey.sh remove <vm-name>   # Return YubiKey to host
+./use-yubikey.sh insert <vm-name>
+./use-yubikey.sh remove <vm-name>
 ```
 
-If multiple YubiKeys are connected, shows a warning and prompts for selection.
+Prompts for selection if multiple YubiKeys are connected. The key is
+exclusively owned by the VM while inserted. Inside the VM, verify with
+`ykman piv info` and
+`pkcs11-tool --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so -L`.
 
-**Notes:**
-- The YubiKey is exclusively owned by the VM while inserted — the host cannot use it.
-- After insert, you may need to restart `pcscd` inside the VM or reboot for detection.
-- Use `ykman piv info` inside the VM to verify the key is accessible and check PIN tries.
-- The VM must have `opensc`, `pcscd`, and `yubikey-manager` installed (included in autoinstall).
-- The autoinstall drops in `/etc/polkit-1/rules.d/99-pcscd.rules` so the `ubuntu` user can access
-  `pcscd` from non-active contexts (Intune Portal, MSAL broker, headless/SSH). Without it,
-  `pkcs11-tool` will report `No slots` and Intune won't see certificates even though
-  `sudo ykman piv info` works.
+## Notes
 
----
+**Login keyring.** Intune enrollment requires the GNOME "Login" keyring to
+exist. Check with
 
-## First login
+```bash
+busctl --user get-property org.freedesktop.secrets \
+  /org/freedesktop/secrets/collection/login \
+  org.freedesktop.Secret.Collection Label
+```
 
-> **Important:** The "Login" keyring must exist before enrolling in Intune Portal.
->
-> Check: `busctl --user get-property org.freedesktop.secrets /org/freedesktop/secrets/collection/login org.freedesktop.Secret.Collection Label`
->
-> Expected output: `s "Login"`
->
-> If the command fails, **reboot and check again**. The keyring is typically created on the next login.
->
-> If it still doesn't exist after a reboot, open Microsoft Edge — you will be prompted to create a "Login" keyring password. Enter the same password as your user login password.
->
-> **Intune Portal enrollment will fail without this keyring.**
+Expected: `s "Login"`. If missing, reboot or open Edge to trigger the
+keyring creation prompt (use the same password as the user login).
 
-<img width="400" alt="keyring prompt" src="https://github.com/user-attachments/assets/7a535c27-fee2-4be2-8aef-7b4ee045efaf" />
+**Smart card polkit rule.** pcscd's default policy allows only active GUI
+sessions. Intune Portal and the identity broker run from a non-active
+context and are rejected — `sudo ykman piv info` sees the certs but Intune's
+picker is empty. The autoinstall drops
+`/etc/polkit-1/rules.d/99-pcscd.rules` to allow the `ubuntu` user.
 
----
+**Host pcscd conflict.** If `pcscd` is running on the host, QEMU may fail to
+claim the USB device (`error -32`). Stop it before attaching:
 
-## What's preconfigured
+```bash
+sudo systemctl stop pcscd pcscd.socket
+```
 
-See [`autoinstall-desktop.yaml`](autoinstall-desktop.yaml) for full details.
+See [YubiKey USB passthrough to VM](Notes/yubikey-passthrough.md) for manual
+XML, verification, and troubleshooting.
 
-- Default user: `ubuntu`
-- Ubuntu Desktop Minimal install
-- LUKS full-disk encryption with Clevis TPM2 auto-unlock
-- SSH server with key-only auth (password auth disabled)
-- Passwordless sudo for `ubuntu` user
-- Password policy: min 12 chars, requires uppercase, lowercase, digit, and special character
-- Disabled services: cups, cups-browsed, avahi-daemon, ModemManager, fwupd, unattended-upgrades, apport
-- Quiet boot splash
+## Testing
 
-### APT repositories
+Static checks:
 
-- [Microsoft Edge](https://packages.microsoft.com/repos/edge/) (stable)
-- [Microsoft Prod](https://packages.microsoft.com/config/ubuntu/26.04/packages-microsoft-prod.deb)
-- [Microsoft Insiders Fast](https://packages.microsoft.com/config/ubuntu/26.04/insiders-fast.list)
-- [Microsoft Ubuntu Jammy Prod](https://packages.microsoft.com/ubuntu/22.04/prod) (for intune-portal)
+```bash
+make validate      # YAML + cloud-init schema + late-commands bash syntax
+make shellcheck    # shellcheck the shell scripts
+```
 
-### Preinstalled packages
+End-to-end in a throwaway VM:
 
-- `microsoft-edge-stable`
-- `microsoft-azurevpnclient`
-- `intune-portal`
-- `opensc`, `pcsc-tools`, `libnss3-tools` (smart card / YubiKey support)
-- `yubikey-manager` (ykman CLI)
-- `clevis`, `clevis-luks`, `clevis-tpm2`, `clevis-dracut`, `tpm2-tools`
+```bash
+make test-vm       # creates intunbuntu-test-<timestamp>
+make clean-test-vm # tears it down
+```
 
----
+No CI yet. `make validate` runs in a second; `make test-vm` takes about 20 minutes.
 
-## Remote config
+## Details
 
-YAML config served at: https://intunbuntu.azurewebsites.net/
+See [`autoinstall-desktop.yaml`](autoinstall-desktop.yaml).
 
-Custom LUKS PIN: `https://intunbuntu.azurewebsites.net/123321`
+- APT sources added: Edge, Prod, Insiders Fast, Jammy Prod (for `intune-portal`).
+- Disabled services: `cups`, `cups-browsed`, `avahi-daemon`, `ModemManager`, `fwupd`, `unattended-upgrades`, `apport`.
+- Password policy: min 12 chars with upper, lower, digit, special.
 
-Validated with `ubuntu-26.04-desktop-amd64.iso` (resolute) and `ubuntu-24.04.4-desktop-amd64.iso` (noble).
+## Remote autoinstall config
 
----
+Served from `https://intunbuntu.azurewebsites.net/`. A custom LUKS PIN can
+be passed in the path, e.g. `https://intunbuntu.azurewebsites.net/123321`.
 
 ## Guides
 
