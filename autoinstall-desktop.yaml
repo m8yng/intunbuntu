@@ -77,6 +77,17 @@ autoinstall:
         fi
       '
 
+    # Disable smart card login at GDM (use password instead)
+    - |
+      curtin in-target -- sh -c '
+        mkdir -p /etc/dconf/db/gdm.d/locks
+        printf "[org/gnome/login-screen]\nenable-smartcard-authentication=false\n" \
+          > /etc/dconf/db/gdm.d/99-no-smartcard
+        echo "/org/gnome/login-screen/enable-smartcard-authentication" \
+          > /etc/dconf/db/gdm.d/locks/smartcard
+        dconf update
+      '
+
     # Services + sudo
     - |
       curtin in-target -- sh -c '
