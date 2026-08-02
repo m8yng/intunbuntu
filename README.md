@@ -67,6 +67,10 @@ If multiple YubiKeys are connected, shows a warning and prompts for selection.
 - After insert, you may need to restart `pcscd` inside the VM or reboot for detection.
 - Use `ykman piv info` inside the VM to verify the key is accessible and check PIN tries.
 - The VM must have `opensc`, `pcscd`, and `yubikey-manager` installed (included in autoinstall).
+- The autoinstall drops in `/etc/polkit-1/rules.d/99-pcscd.rules` so the `ubuntu` user can access
+  `pcscd` from non-active contexts (Intune Portal, MSAL broker, headless/SSH). Without it,
+  `pkcs11-tool` will report `No slots` and Intune won't see certificates even though
+  `sudo ykman piv info` works.
 
 ---
 

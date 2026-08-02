@@ -63,6 +63,9 @@ autoinstall:
         apt update
         apt install -y microsoft-edge-stable microsoft-azurevpnclient intune-portal \
           opensc pcsc-tools libnss3-tools yubikey-manager openvpn3-client
+
+        apt autoremove --purge -y
+        apt clean
       '
 
     # Clevis TPM2 auto-unlock
@@ -86,6 +89,21 @@ autoinstall:
         echo "/org/gnome/login-screen/enable-smartcard-authentication" \
           > /etc/dconf/db/gdm.d/locks/smartcard
         dconf update
+      '
+
+    # Polkit rule for smart card access (needed by Intune/Edge which run in non-active contexts)
+    - |
+      curtin in-target -- sh -c '
+        printf "%s\n" \
+          "polkit.addRule(function(action, subject) {" \
+          "    if (action.id == \"org.debian.pcsc-lite.access_pcsc\" ||" \
+          "        action.id == \"org.debian.pcsc-lite.access_card\") {" \
+          "        if (subject.user == \"ubuntu\") {" \
+          "            return polkit.Result.YES;" \
+          "        }" \
+          "    }" \
+          "});" \
+          > /etc/polkit-1/rules.d/99-pcscd.rules
       '
 
     # Services + sudo
