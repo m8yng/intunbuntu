@@ -6,10 +6,10 @@ Autoinstall config and helper scripts to build an Ubuntu Desktop VM for Intune e
 
 ## Overview
 
-`create-intunbuntu-vm.sh` takes a stock Ubuntu Desktop ISO, remasters it with
-`autoinstall-desktop.yaml`, and creates a libvirt/QEMU VM that installs
-without prompts. On first boot the VM has the Intune Portal client, Edge,
-LUKS with TPM2 auto-unlock, and smart card support ready for user sign-in.
+The script downloads the Ubuntu ISO, remasters it with the
+[autoinstall YAML](autoinstall-desktop.yaml), and boots the VM. Intune
+Portal, Edge, LUKS+TPM2 auto-unlock, and smart card support are set up
+during install.
 
 ## Added on top of stock Ubuntu
 
@@ -77,37 +77,7 @@ exclusively owned by the VM while inserted. Inside the VM, verify with
 - [Gotchas](Notes/gotchas.md) — login keyring, smart card polkit rule, host pcscd conflict
 - [YubiKey USB passthrough to VM](Notes/yubikey-passthrough.md) — manual XML flow and troubleshooting
 
-## Testing
-
-Static checks:
-
-```bash
-make validate      # YAML + cloud-init schema + late-commands bash syntax
-make shellcheck    # shellcheck the shell scripts
-```
-
-End-to-end in a throwaway VM:
-
-```bash
-make test-vm       # creates intunbuntu-test-<timestamp>
-make clean-test-vm # tears it down
-```
-
-No CI yet. `make validate` runs in a second; `make test-vm` takes about 20 minutes.
-
-## Details
-
-See [`autoinstall-desktop.yaml`](autoinstall-desktop.yaml).
-
-- APT sources added: Edge, Prod, Insiders Fast, Jammy Prod (for `intune-portal`).
-- Disabled services: `cups`, `cups-browsed`, `avahi-daemon`, `ModemManager`, `fwupd`, `unattended-upgrades`, `apport`.
-- Password policy: min 12 chars with upper, lower, digit, special.
-
 ## Remote autoinstall config
 
 Served from `https://intunbuntu.azurewebsites.net/`. A custom LUKS PIN can
 be passed in the path, e.g. `https://intunbuntu.azurewebsites.net/123321`.
-
-## Guides
-
-See [Notes/](Notes/).
