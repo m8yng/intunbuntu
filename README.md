@@ -16,10 +16,10 @@ during install.
 | Area | Content |
 |---|---|
 | Install | Unattended autoinstall |
-| Intune stack | `intune-portal`, `microsoft-edge-stable`, `microsoft-azurevpnclient` |
+| Intune stack | `intune-portal`, `microsoft-edge-stable` |
 | Disk encryption | LUKS + `clevis-tpm2` auto-unlock |
 | Smart card | `opensc`, `pcscd`, `yubikey-manager`, polkit rule for `pcscd` access |
-| VPN | `openvpn3-client`, `microsoft-azurevpnclient` |
+| VPN | `microsoft-azurevpnclient`, `openvpn3-client` |
 | Hardening | `pam_pwquality` policy, key-only SSH, GDM smart-card auth disabled, several daemons disabled |
 | Tools | `use-yubikey.sh` — USB-passthrough a YubiKey to a running VM |
 
