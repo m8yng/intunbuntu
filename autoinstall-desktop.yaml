@@ -62,7 +62,7 @@ autoinstall:
 
         apt update
         apt install -y microsoft-edge-stable microsoft-azurevpnclient intune-portal \
-          opensc pcsc-tools libnss3-tools yubikey-manager openvpn3-client
+          opensc pcsc-tools libnss3-tools yubikey-manager openvpn3-client efitools
 
         apt autoremove --purge -y
         apt clean

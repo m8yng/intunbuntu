@@ -20,6 +20,7 @@ during install.
 | Disk encryption | LUKS + `clevis-tpm2` auto-unlock |
 | Smart card | `opensc`, `pcscd`, `yubikey-manager`, polkit rule for `pcscd` access |
 | VPN | `microsoft-azurevpnclient`, `openvpn3-client` |
+| Secure Boot | `efitools` for state inspection |
 | Hardening | `pam_pwquality` policy, key-only SSH, GDM smart-card auth disabled, several daemons disabled |
 | Tools | `use-yubikey.sh` — USB-passthrough a YubiKey to a running VM |
 
